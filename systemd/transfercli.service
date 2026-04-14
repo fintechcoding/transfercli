@@ -1,0 +1,16 @@
+[Unit]
+Description=TransferCLI upload server (transfer.sh backend)
+After=network.target
+
+[Service]
+Type=simple
+User=transfercli
+Group=transfercli
+WorkingDirectory=/var/lib/transfercli
+EnvironmentFile=-/etc/transfercli.env
+ExecStart=/opt/transfercli/transfersh --listener 127.0.0.1:${TC_PORT_UPLOAD} --force-https --provider local --basedir /var/lib/transfercli/uploads --temp-path /var/lib/transfercli/temp
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

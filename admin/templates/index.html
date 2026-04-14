@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>{{.Title}}</title>
+<style>
+*{box-sizing:border-box}
+body{font-family:system-ui,-apple-system,sans-serif;max-width:1400px;margin:20px auto;padding:0 20px;background:#f5f5f5;color:#222}
+h1,h2,h3{margin:0}
+h2{font-size:16px;color:#4a5568;margin-bottom:10px}
+.topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:15px}
+.stat{background:#fff;padding:14px 18px;border-radius:6px;box-shadow:0 1px 3px rgba(0,0,0,0.05)}
+.stat-label{font-size:11px;text-transform:uppercase;color:#888;letter-spacing:.5px;margin-bottom:4px}
+.stat-value{font-size:22px;font-weight:600;color:#2d3748}
+.stat-sub{font-size:11px;color:#888;margin-top:4px}
+.pbar{height:6px;background:#e2e8f0;border-radius:3px;margin-top:8px;overflow:hidden}
+.pbar-fill{height:100%;background:linear-gradient(90deg,#3182ce,#63b3ed);transition:width .3s}
+.info{background:#fff;padding:12px 16px;border-radius:6px;margin-bottom:15px;font-size:14px;color:#555;box-shadow:0 1px 3px rgba(0,0,0,0.05)}
+.charts{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:15px}
+.chart-card{background:#fff;padding:16px 18px;border-radius:6px;box-shadow:0 1px 3px rgba(0,0,0,0.05)}
+.daybar{display:flex;align-items:flex-end;gap:10px;height:120px;margin-top:20px}
+.daybar-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px}
+.daybar-fill{width:100%;background:linear-gradient(180deg,#63b3ed,#3182ce);border-radius:4px 4px 0 0;min-height:2px;transition:height .3s}
+.daybar-label{font-size:10px;color:#888}
+.daybar-count{font-size:11px;color:#444;font-weight:600}
+.pie-wrap{display:flex;align-items:center;gap:16px;margin-top:10px}
+.pie{flex-shrink:0}
+.pie-legend{flex:1;font-size:12px}
+.pie-legend-item{display:flex;align-items:center;gap:6px;margin-bottom:4px}
+.pie-legend-dot{width:10px;height:10px;border-radius:2px;flex-shrink:0}
+.pie-legend-name{flex:1}
+.pie-legend-count{color:#888}
+.top-list{margin-top:10px;font-size:13px}
+.top-item{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f0f0f0}
+.top-item:last-child{border:none}
+.top-item-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-right:10px}
+.top-item-val{color:#888;font-size:12px;flex-shrink:0}
+.toolbar{display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap}
+.toolbar input[type=search]{flex:1;min-width:200px;padding:8px 12px;border:1px solid #ddd;border-radius:4px;font-size:13px}
+.bulk-actions{display:none;gap:6px;align-items:center;background:#fef5e7;padding:6px 12px;border-radius:4px;font-size:12px}
+.bulk-actions.show{display:flex}
+table{width:100%;border-collapse:collapse;background:#fff;border-radius:6px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.05)}
+th,td{padding:12px 10px;text-align:left;border-bottom:1px solid #eee;font-size:13px;vertical-align:top}
+th{background:#2d3748;color:#fff;font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.5px;cursor:pointer;user-select:none}
+th.sortable:hover{background:#1a202c}
+th.sort-asc::after{content:' ↑'}
+th.sort-desc::after{content:' ↓'}
+tr:hover td{background:#fafafa}
+a{color:#3182ce;text-decoration:none}
+a:hover{text-decoration:underline}
+.btn{display:inline-block;padding:6px 12px;border-radius:4px;border:none;cursor:pointer;text-decoration:none;font-size:12px;margin-right:4px;font-weight:500}
+.btn-del{background:#e53e3e;color:#fff}
+.btn-del:hover{background:#c53030}
+.btn-edit{background:#dd6b20;color:#fff}
+.btn-edit:hover{background:#c05621}
+.btn-link{background:#3182ce;color:#fff}
+.btn-link:hover{background:#2c5282}
+.btn-ghost{background:#edf2f7;color:#2d3748}
+.btn-preview{background:#805ad5;color:#fff}
+.mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px}
+.muted{color:#888;font-size:11px}
+form{display:inline}
+details{display:inline-block}
+details[open] summary{margin-bottom:6px}
+.edit-form{display:flex;gap:8px;margin-top:8px;align-items:end;background:#f9f9f9;padding:8px;border-radius:4px;font-size:12px;flex-wrap:wrap}
+.edit-form label{display:flex;flex-direction:column;font-size:11px;color:#555}
+.edit-form input{width:70px;padding:4px;border:1px solid #ddd;border-radius:3px}
+.empty{text-align:center;padding:40px;color:#888}
+.modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:100;align-items:center;justify-content:center}
+.modal.show{display:flex}
+.modal-content{background:#fff;max-width:90%;max-height:90%;overflow:auto;border-radius:8px;padding:20px}
+.modal-close{float:right;cursor:pointer;font-size:24px;line-height:1;background:none;border:none;color:#666}
+.modal-body img,.modal-body iframe{max-width:100%;max-height:75vh}
+.modal-body pre{max-width:80vw;max-height:75vh;overflow:auto;background:#f5f5f5;padding:12px;border-radius:4px;font-size:12px}
+@media(max-width:900px){.charts{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="topbar">
+<h1>{{.Title}}</h1>
+<a class="btn btn-link" href="/admin/settings">⚙ Settings</a>
+</div>
+
+<div class="stats">
+<div class="stat"><div class="stat-label">Files</div><div class="stat-value">{{.Stats.TotalFiles}}</div></div>
+<div class="stat"><div class="stat-label">Total size</div><div class="stat-value">{{.Stats.TotalSizeHuman}}</div></div>
+<div class="stat"><div class="stat-label">Downloads</div><div class="stat-value">{{.Stats.TotalDownloads}}</div></div>
+<div class="stat"><div class="stat-label">Disk</div><div class="stat-value">{{.Stats.DiskUsedHuman}} / {{.Stats.DiskTotalHuman}}</div><div class="pbar"><div class="pbar-fill" style="width:{{.Stats.DiskUsedPercent}}%"></div></div><div class="stat-sub">{{.Stats.DiskFreeHuman}} free · {{.Stats.DiskUsedPercent}}%</div></div>
+</div>
+
+<div class="info">
+<strong>Global purge:</strong> {{if .Config.PurgeDays}}every {{.Config.PurgeInterval}}h after {{.Config.PurgeDays}} days{{else}}disabled (files kept forever){{end}}
+</div>
+
+<div class="charts">
+<div class="chart-card">
+<h2>Uploads · last 7 days</h2>
+<div class="daybar">
+{{range .Stats.DailyUploads}}
+<div class="daybar-col">
+<div class="daybar-count">{{.Count}}</div>
+<div class="daybar-fill" style="height:{{if .Height}}{{.Height}}%{{else}}2px{{end}}"></div>
+<div class="daybar-label">{{.Label}}</div>
+</div>
+{{end}}
+</div>
+</div>
+
+<div class="chart-card">
+<h2>File types</h2>
+<div class="pie-wrap">
+<svg class="pie" width="140" height="140" viewBox="0 0 42 42">
+<circle cx="21" cy="21" r="15.915" fill="#fff" stroke="#edf2f7" stroke-width="8"/>
+{{range .Stats.TypeBreakdown}}
+<circle cx="21" cy="21" r="15.915" fill="transparent" stroke="{{.Color}}" stroke-width="8" stroke-dasharray="{{.Percent}} {{printf "%.2f" (minus 100.0 .Percent)}}" stroke-dashoffset="{{printf "%.2f" (minus 25.0 .Offset)}}" transform="rotate(-90 21 21)"/>
+{{end}}
+</svg>
+<div class="pie-legend">
+{{range .Stats.TypeBreakdown}}
+<div class="pie-legend-item"><span class="pie-legend-dot" style="background:{{.Color}}"></span><span class="pie-legend-name">{{.Name}}</span><span class="pie-legend-count">{{.Count}} · {{printf "%.0f" .Percent}}%</span></div>
+{{else}}
+<div class="muted">No data</div>
+{{end}}
+</div>
+</div>
+</div>
+
+<div class="chart-card">
+<h2>🏆 Top downloads</h2>
+<div class="top-list">
+{{range .Stats.TopDownloads}}
+<div class="top-item"><div class="top-item-name">{{.Filename}}</div><div class="top-item-val">{{.Downloads}} dl</div></div>
+{{else}}
+<div class="muted">No downloads yet</div>
+{{end}}
+</div>
+</div>
+
+<div class="chart-card">
+<h2>💾 Largest files</h2>
+<div class="top-list">
+{{range .Stats.TopSize}}
+<div class="top-item"><div class="top-item-name">{{.Filename}}</div><div class="top-item-val">{{.SizeHuman}}</div></div>
+{{else}}
+<div class="muted">No files</div>
+{{end}}
+</div>
+</div>
+</div>
+
+<h2 style="margin:20px 0 10px">Files</h2>
+
+<form id="bulkform" method="post" action="/admin/bulk-delete">
+<div class="toolbar">
+<input type="search" id="searchbox" placeholder="🔍 Search filename / type..." oninput="filterTable()">
+<div class="bulk-actions" id="bulkbar">
+<span id="bulkcount">0</span> selected
+<button type="submit" class="btn btn-del" onclick="return confirm('Delete selected files?')">Delete selected</button>
+</div>
+</div>
+
+<table id="filetable">
+<thead><tr>
+<th><input type="checkbox" id="selectall" onchange="toggleAll(this)"></th>
+<th class="sortable" onclick="sortTable(1,'str')">ID</th>
+<th class="sortable" onclick="sortTable(2,'str')">File</th>
+<th class="sortable" onclick="sortTable(3,'num')" data-unit="size">Size</th>
+<th class="sortable" onclick="sortTable(4,'num')" data-unit="ts">Uploaded</th>
+<th class="sortable" onclick="sortTable(5,'num')">Downloads</th>
+<th>Expiry</th>
+<th>Actions</th>
+</tr></thead>
+<tbody>
+{{range .Files}}
+<tr data-type="{{.ContentType}}">
+<td><input type="checkbox" class="rowcb" name="ids" value="{{.ID}}" onchange="updateBulk()"></td>
+<td class="mono">{{.ID}}</td>
+<td><a href="{{$.BaseURL}}{{.RelPath}}" target="_blank">{{.Filename}}</a>{{if .Encrypted}} 🔒{{end}}<br><span class="muted">{{.ContentType}}</span></td>
+<td data-sort="{{.Size}}">{{.SizeHuman}}</td>
+<td data-sort="{{.UploadedAt.Unix}}">{{.UploadedAgo}}<br><span class="muted mono">{{fmtTime .UploadedAt}}</span></td>
+<td data-sort="{{.Downloads}}">{{.Downloads}}{{if gt .MaxDownloads 0}} / {{.MaxDownloads}}{{end}}</td>
+<td>{{.ExpiresIn}}</td>
+<td>
+<button type="button" class="btn btn-preview" onclick="preview('{{$.BaseURL}}{{.RelPath}}','{{.ContentType}}','{{.Filename}}')">👁</button>
+<button type="button" class="btn btn-ghost" onclick="copyLink('{{$.BaseURL}}{{.RelPath}}',this)">📋</button>
+<details><summary class="btn btn-edit">Edit</summary>
+<div class="edit-form">
+<form method="post" action="/admin/expiry?id={{.ID}}">
+<label>Days<input name="max_days" type="number" min="0" placeholder="30"></label>
+<label>Max DL<input name="max_downloads" type="number" placeholder="-1"></label>
+<button class="btn btn-edit" type="submit">Save</button>
+</form>
+</div>
+</details>
+<form method="post" action="/admin/delete?id={{.ID}}" onsubmit="return confirm('Delete {{.Filename}}?')">
+<button class="btn btn-del" type="submit">Delete</button>
+</form>
+</td>
+</tr>
+{{else}}
+<tr><td colspan="8" class="empty">No files uploaded yet</td></tr>
+{{end}}
+</tbody>
+</table>
+</form>
+
+<div class="modal" id="modal" onclick="if(event.target===this)closeModal()">
+<div class="modal-content">
+<button class="modal-close" onclick="closeModal()">×</button>
+<h3 id="modal-title"></h3>
+<div class="modal-body" id="modal-body"></div>
+</div>
+</div>
+
+<script>
+function toggleAll(cb){document.querySelectorAll('.rowcb').forEach(c=>{if(c.closest('tr').style.display!=='none')c.checked=cb.checked});updateBulk()}
+function updateBulk(){const s=document.querySelectorAll('.rowcb:checked');document.getElementById('bulkcount').textContent=s.length;document.getElementById('bulkbar').classList.toggle('show',s.length>0)}
+function filterTable(){const q=document.getElementById('searchbox').value.toLowerCase();document.querySelectorAll('#filetable tbody tr').forEach(r=>{const t=r.textContent.toLowerCase();r.style.display=t.includes(q)?'':'none'})}
+let sortState={col:-1,dir:1}
+function sortTable(col,type){const tb=document.querySelector('#filetable tbody');const rows=Array.from(tb.querySelectorAll('tr')).filter(r=>!r.querySelector('.empty'));if(sortState.col===col)sortState.dir=-sortState.dir;else{sortState.col=col;sortState.dir=1}rows.sort((a,b)=>{const ac=a.cells[col],bc=b.cells[col];if(!ac||!bc)return 0;let av=ac.dataset.sort||ac.textContent.trim(),bv=bc.dataset.sort||bc.textContent.trim();if(type==='num'){av=parseFloat(av)||0;bv=parseFloat(bv)||0;return(av-bv)*sortState.dir}return av.localeCompare(bv)*sortState.dir});rows.forEach(r=>tb.appendChild(r));document.querySelectorAll('th.sortable').forEach(th=>th.classList.remove('sort-asc','sort-desc'));const ths=document.querySelectorAll('th');if(ths[col])ths[col].classList.add(sortState.dir>0?'sort-asc':'sort-desc')}
+function copyLink(url,btn){navigator.clipboard.writeText(url).then(()=>{const o=btn.textContent;btn.textContent='✓';setTimeout(()=>btn.textContent=o,1500)})}
+function preview(url,ctype,name){const m=document.getElementById('modal'),b=document.getElementById('modal-body'),t=document.getElementById('modal-title');t.textContent=name;b.innerHTML='';if(ctype.startsWith('image/')){b.innerHTML=`<img src="${url}">`}else if(ctype.startsWith('text/')||ctype.includes('json')||ctype.includes('xml')){fetch(url).then(r=>r.text()).then(txt=>{b.innerHTML='<pre></pre>';b.querySelector('pre').textContent=txt.substring(0,100000)})}else if(ctype.includes('pdf')){b.innerHTML=`<iframe src="${url}" width="800" height="600"></iframe>`}else if(ctype.startsWith('video/')){b.innerHTML=`<video src="${url}" controls style="max-width:100%;max-height:75vh"></video>`}else if(ctype.startsWith('audio/')){b.innerHTML=`<audio src="${url}" controls></audio>`}else{b.innerHTML=`<p>No preview available for <code>${ctype}</code></p><p><a href="${url}" class="btn btn-link" target="_blank">Open in new tab</a></p>`}m.classList.add('show')}
+function closeModal(){document.getElementById('modal').classList.remove('show');document.getElementById('modal-body').innerHTML=''}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal()})
+</script>
+</body>
+</html>

@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Settings - {{.Title}}</title>
+<style>
+body{font-family:system-ui,-apple-system,sans-serif;max-width:600px;margin:40px auto;padding:0 20px;background:#f5f5f5;color:#222}
+.card{background:#fff;padding:25px;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,0.05)}
+h1{margin-top:0}
+label{display:block;margin:18px 0 4px;font-size:13px;font-weight:600;color:#444}
+input{padding:10px;font-size:14px;width:100%;border:1px solid #ddd;border-radius:4px}
+.hint{color:#888;font-size:12px;margin-top:4px}
+button{padding:12px 24px;background:#3182ce;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:14px;font-weight:600;margin-top:20px}
+button:hover{background:#2c5282}
+a{color:#3182ce;text-decoration:none}
+.warn{background:#fef5e7;border-left:3px solid #dd6b20;padding:10px;margin:20px 0;font-size:13px;border-radius:4px}
+</style>
+</head>
+<body>
+<div class="card">
+<p><a href="/admin/">← Back to files</a></p>
+<h1>⚙ Global Settings</h1>
+<form method="post" action="/admin/settings">
+<label>Purge after (days)</label>
+<input type="number" name="purge_days" value="{{.PurgeDays}}" min="0">
+<div class="hint">Files older than this will be auto-deleted. 0 = disabled (never)</div>
+
+<label>Purge check interval (hours)</label>
+<input type="number" name="purge_interval" value="{{.PurgeInterval}}" min="0">
+<div class="hint">How often transfer.sh checks for expired files. 0 = disabled</div>
+
+<div class="warn">⚠ Saving will restart the transfer.sh service (brief downtime ~2 seconds)</div>
+<button type="submit">Save & Restart Service</button>
+</form>
+</div>
+</body>
+</html>

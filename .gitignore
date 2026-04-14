@@ -1,0 +1,22 @@
+# Build artifacts (binaries only, not service files)
+admin/admin
+admin/transfercli-admin
+/transfercli-admin-linux-*
+/transfercli-admin-darwin-*
+*.exe
+*.test
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Runtime data (never commit)
+*.db
+*.sqlite
+*.htpasswd
+/var/

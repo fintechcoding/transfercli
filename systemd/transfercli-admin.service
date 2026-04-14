@@ -1,0 +1,16 @@
+[Unit]
+Description=TransferCLI admin panel
+After=network.target transfercli.service
+
+[Service]
+Type=simple
+User=transfercli
+Group=transfercli
+WorkingDirectory=/var/lib/transfercli
+EnvironmentFile=-/etc/transfercli-admin.env
+ExecStart=/opt/transfercli/transfercli-admin
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
