@@ -2,7 +2,7 @@
 #
 # TransferCLI installer
 # Usage:
-#   curl -fsSL https://raw.githubusercontent.com/USER/transfercli/main/install.sh | sudo bash
+#   curl -fsSL https://raw.githubusercontent.com/codingsecurity/transfercli/main/install.sh | sudo bash
 #
 # Optional env vars:
 #   TC_DOMAIN          - domain for nginx+HTTPS (e.g. files.example.com)
@@ -13,13 +13,13 @@
 #   TC_PORT_ADMIN      - admin panel listen port (default: 8082)
 #   TC_PURGE_DAYS      - auto-purge after N days (default: 30)
 #   TC_TITLE           - admin panel title (default: TransferCLI)
-#   TC_REPO            - install source (default: USER/transfercli)
+#   TC_REPO            - install source (default: codingsecurity/transfercli)
 #   TC_VERSION         - release tag (default: latest, source build fallback)
 
 set -euo pipefail
 
 # ---------- config ----------
-REPO="${TC_REPO:-USER/transfercli}"
+REPO="${TC_REPO:-codingsecurity/transfercli}"
 VERSION="${TC_VERSION:-main}"
 PORT_UPLOAD="${TC_PORT_UPLOAD:-8081}"
 PORT_ADMIN="${TC_PORT_ADMIN:-8082}"

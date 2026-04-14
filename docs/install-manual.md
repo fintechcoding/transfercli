@@ -36,7 +36,7 @@ sudo chmod +x /opt/transfercli/transfersh
 Requires Go 1.22+:
 ```bash
 sudo apt install -y golang-go
-git clone https://github.com/USER/transfercli.git /tmp/transfercli
+git clone https://github.com/codingsecurity/transfercli.git /tmp/transfercli
 cd /tmp/transfercli/admin
 go build -o /opt/transfercli/transfercli-admin main.go
 ```

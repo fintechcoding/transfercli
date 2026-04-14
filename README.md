@@ -60,12 +60,12 @@ TransferCLI bundles [transfer.sh](https://github.com/dutchcoders/transfer.sh) wi
 
 **Minimal (localhost only, no TLS):**
 ```bash
-curl -fsSL https://raw.githubusercontent.com/USER/transfercli/main/install.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/codingsecurity/transfercli/main/install.sh | sudo bash
 ```
 
 **With domain + automatic HTTPS:**
 ```bash
-curl -fsSL https://raw.githubusercontent.com/USER/transfercli/main/install.sh \
+curl -fsSL https://raw.githubusercontent.com/codingsecurity/transfercli/main/install.sh \
   | sudo TC_DOMAIN=files.example.com TC_EMAIL=me@example.com bash
 ```
 
@@ -73,7 +73,7 @@ After install, the admin credentials are printed. Access the admin at `https://y
 
 > **Security note:** Always inspect a shell script before piping to `sudo bash`:
 > ```bash
-> curl -fsSL https://raw.githubusercontent.com/USER/transfercli/main/install.sh -o install.sh
+> curl -fsSL https://raw.githubusercontent.com/codingsecurity/transfercli/main/install.sh -o install.sh
 > less install.sh    # review
 > sudo bash install.sh
 > ```
@@ -142,7 +142,7 @@ Not a fan of `curl \| bash`? See [docs/install-manual.md](docs/install-manual.md
 
 Re-run the installer. It's idempotent and upgrades binaries in place without touching your data:
 ```bash
-curl -fsSL https://raw.githubusercontent.com/USER/transfercli/main/install.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/codingsecurity/transfercli/main/install.sh | sudo bash
 ```
 
 ---
@@ -150,7 +150,7 @@ curl -fsSL https://raw.githubusercontent.com/USER/transfercli/main/install.sh | 
 ## Uninstalling
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/USER/transfercli/main/uninstall.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/codingsecurity/transfercli/main/uninstall.sh | sudo bash
 ```
 Prompts before removing data, nginx config, and the system user.
 
