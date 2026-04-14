@@ -50,9 +50,9 @@ TransferCLI bundles [transfer.sh](https://github.com/dutchcoders/transfer.sh) wi
 |---|---|
 | ![Dashboard](docs/images/dashboard.png) | ![Files](docs/images/files.png) |
 
-| Preview Modal | Global Settings |
+| Edit Modal | Global Settings |
 |---|---|
-| ![Preview](docs/images/preview.png) | ![Settings](docs/images/settings.png) |
+| ![Edit](docs/images/edit-modal.png) | ![Settings](docs/images/settings.png) |
 
 ---
 

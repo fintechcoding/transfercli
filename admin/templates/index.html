@@ -184,15 +184,7 @@ details[open] summary{margin-bottom:6px}
 <td>
 <button type="button" class="btn btn-preview" onclick="preview('{{$.BaseURL}}{{.RelPath}}','{{.ContentType}}','{{.Filename}}')">👁</button>
 <button type="button" class="btn btn-ghost" onclick="copyLink('{{$.BaseURL}}{{.RelPath}}',this)">📋</button>
-<details><summary class="btn btn-edit">Edit</summary>
-<div class="edit-form">
-<form method="post" action="/admin/expiry?id={{.ID}}">
-<label>Days<input name="max_days" type="number" min="0" placeholder="30"></label>
-<label>Max DL<input name="max_downloads" type="number" placeholder="-1"></label>
-<button class="btn btn-edit" type="submit">Save</button>
-</form>
-</div>
-</details>
+<button type="button" class="btn btn-edit" onclick="editFile('{{.ID}}','{{.Filename}}')">Edit</button>
 <form method="post" action="/admin/delete?id={{.ID}}" onsubmit="return confirm('Delete {{.Filename}}?')">
 <button class="btn btn-del" type="submit">Delete</button>
 </form>
@@ -204,6 +196,30 @@ details[open] summary{margin-bottom:6px}
 </tbody>
 </table>
 </form>
+
+<div class="modal" id="edit-modal" onclick="if(event.target===this)closeEdit()">
+<div class="modal-content" style="max-width:440px;padding:24px">
+<button class="modal-close" onclick="closeEdit()">×</button>
+<h3 id="edit-title" style="margin:0 0 4px">Edit file</h3>
+<div id="edit-subtitle" class="muted" style="margin-bottom:16px"></div>
+<form id="edit-form" method="post">
+<div style="margin:14px 0">
+<label style="display:block;font-size:12px;font-weight:600;color:#444;margin-bottom:6px">Expires after (days)</label>
+<input name="max_days" type="number" min="0" placeholder="e.g. 30" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:5px;font-size:14px">
+<div style="font-size:11px;color:#888;margin-top:4px">Leave blank to keep current. Use 0 for never.</div>
+</div>
+<div style="margin:14px 0">
+<label style="display:block;font-size:12px;font-weight:600;color:#444;margin-bottom:6px">Max downloads</label>
+<input name="max_downloads" type="number" placeholder="-1 for unlimited" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:5px;font-size:14px">
+<div style="font-size:11px;color:#888;margin-top:4px">Leave blank to keep current. -1 = unlimited.</div>
+</div>
+<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:22px">
+<button type="button" class="btn btn-ghost" onclick="closeEdit()">Cancel</button>
+<button type="submit" class="btn btn-edit">Save</button>
+</div>
+</form>
+</div>
+</div>
 
 <div class="modal" id="modal" onclick="if(event.target===this)closeModal()">
 <div class="modal-content">
@@ -222,7 +238,9 @@ function sortTable(col,type){const tb=document.querySelector('#filetable tbody')
 function copyLink(url,btn){navigator.clipboard.writeText(url).then(()=>{const o=btn.textContent;btn.textContent='✓';setTimeout(()=>btn.textContent=o,1500)})}
 function preview(url,ctype,name){const m=document.getElementById('modal'),b=document.getElementById('modal-body'),t=document.getElementById('modal-title');t.textContent=name;b.innerHTML='';if(ctype.startsWith('image/')){b.innerHTML=`<img src="${url}">`}else if(ctype.startsWith('text/')||ctype.includes('json')||ctype.includes('xml')){fetch(url).then(r=>r.text()).then(txt=>{b.innerHTML='<pre></pre>';b.querySelector('pre').textContent=txt.substring(0,100000)})}else if(ctype.includes('pdf')){b.innerHTML=`<iframe src="${url}" width="800" height="600"></iframe>`}else if(ctype.startsWith('video/')){b.innerHTML=`<video src="${url}" controls style="max-width:100%;max-height:75vh"></video>`}else if(ctype.startsWith('audio/')){b.innerHTML=`<audio src="${url}" controls></audio>`}else{b.innerHTML=`<p>No preview available for <code>${ctype}</code></p><p><a href="${url}" class="btn btn-link" target="_blank">Open in new tab</a></p>`}m.classList.add('show')}
 function closeModal(){document.getElementById('modal').classList.remove('show');document.getElementById('modal-body').innerHTML=''}
-document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal()})
+function editFile(id,filename){const m=document.getElementById('edit-modal');const f=document.getElementById('edit-form');document.getElementById('edit-title').textContent='Edit file';document.getElementById('edit-subtitle').textContent=filename;f.action='/admin/expiry?id='+encodeURIComponent(id);f.reset();m.classList.add('show')}
+function closeEdit(){document.getElementById('edit-modal').classList.remove('show')}
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeModal();closeEdit()}})
 </script>
 </body>
 </html>
