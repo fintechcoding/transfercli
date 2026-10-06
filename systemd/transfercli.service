@@ -1,6 +1,8 @@
+# Reference copy of the unit install.sh writes (default ports and paths).
 [Unit]
-Description=TransferCLI upload server (transfer.sh backend)
-After=network.target
+Description=TransferCLI upload server (transfer.sh)
+After=network-online.target
+Wants=network-online.target
 
 [Service]
 Type=simple
@@ -8,9 +10,36 @@ User=transfercli
 Group=transfercli
 WorkingDirectory=/var/lib/transfercli
 EnvironmentFile=-/etc/transfercli.env
-ExecStart=/opt/transfercli/transfersh --listener 127.0.0.1:${TC_PORT_UPLOAD} --force-https --provider local --basedir /var/lib/transfercli/uploads --temp-path /var/lib/transfercli/temp
+EnvironmentFile=-/etc/transfercli/transfersh.env
+ExecStart=/opt/transfercli/transfersh --listener 127.0.0.1:8081 --force-https --provider local --basedir /var/lib/transfercli/uploads --temp-path /var/lib/transfercli/temp
 Restart=on-failure
 RestartSec=5
+LimitNOFILE=65536
+ReadWritePaths=/var/lib/transfercli
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+ProtectProc=invisible
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallErrorNumber=EPERM
+CapabilityBoundingSet=
+AmbientCapabilities=
+UMask=0027
 
 [Install]
 WantedBy=multi-user.target

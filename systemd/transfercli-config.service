@@ -1,0 +1,6 @@
+[Unit]
+Description=Apply TransferCLI settings (restart transfer.sh)
+
+[Service]
+Type=oneshot
+ExecStart=/bin/systemctl try-restart transfercli.service

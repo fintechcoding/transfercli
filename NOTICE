@@ -1,5 +1,5 @@
 TransferCLI
-========
+===========
 
 TransferCLI bundles and builds upon transfer.sh:
 
@@ -8,10 +8,12 @@ TransferCLI bundles and builds upon transfer.sh:
   Licensed under the MIT License
   https://github.com/dutchcoders/transfer.sh
 
-The transfer.sh binary is distributed unmodified as downloaded from the
-upstream GitHub Releases. TransferCLI adds:
+Since v2.0.0 the transfer.sh binary shipped with TransferCLI is compiled from
+unmodified upstream source (the commit pinned in backend/go.mod) with a current
+Go toolchain. TransferCLI adds:
 
 - A web admin panel (admin/)
+- A small build wrapper for transfer.sh (backend/)
 - An installer script (install.sh)
 - Systemd unit files
 - Example nginx configuration

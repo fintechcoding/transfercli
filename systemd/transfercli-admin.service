@@ -1,6 +1,8 @@
+# Reference copy of the unit install.sh writes (default ports and paths).
 [Unit]
 Description=TransferCLI admin panel
-After=network.target transfercli.service
+After=network-online.target transfercli.service
+Wants=network-online.target
 
 [Service]
 Type=simple
@@ -11,6 +13,31 @@ EnvironmentFile=-/etc/transfercli-admin.env
 ExecStart=/opt/transfercli/transfercli-admin
 Restart=on-failure
 RestartSec=5
+ReadWritePaths=/var/lib/transfercli /etc/transfercli.env
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+ProtectProc=invisible
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallErrorNumber=EPERM
+CapabilityBoundingSet=
+AmbientCapabilities=
+UMask=0027
 
 [Install]
 WantedBy=multi-user.target
