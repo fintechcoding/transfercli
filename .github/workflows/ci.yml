@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  go:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.27'
+          check-latest: true
+      - name: Admin panel - vet and test
+        run: cd admin && go vet ./... && go test -count=1 ./...
+      - name: transfer.sh backend - build
+        run: cd backend && CGO_ENABLED=0 go build -trimpath -o /tmp/transfersh . && /tmp/transfersh --version
+      - name: govulncheck
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+          (cd admin && govulncheck ./...)
+          (cd backend && govulncheck ./...)
+
+  shell:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: shellcheck
+        run: shellcheck -S warning install.sh uninstall.sh scripts/build-release.sh

@@ -1,7 +1,8 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{{.Title}}</title>
 <style>
 *{box-sizing:border-box}
@@ -176,18 +177,16 @@ details[open] summary{margin-bottom:6px}
 <tr data-type="{{.ContentType}}">
 <td><input type="checkbox" class="rowcb" name="ids" value="{{.ID}}" onchange="updateBulk()"></td>
 <td class="mono">{{.ID}}</td>
-<td><a href="{{$.BaseURL}}{{.RelPath}}" target="_blank">{{.Filename}}</a>{{if .Encrypted}} 🔒{{end}}<br><span class="muted">{{.ContentType}}</span></td>
+<td><a href="{{$.BaseURL}}{{.RelPath}}" target="_blank" rel="noopener noreferrer">{{.Filename}}</a>{{if .Encrypted}} 🔒{{end}}<br><span class="muted">{{.ContentType}}</span></td>
 <td data-sort="{{.Size}}">{{.SizeHuman}}</td>
 <td data-sort="{{.UploadedAt.Unix}}">{{.UploadedAgo}}<br><span class="muted mono">{{fmtTime .UploadedAt}}</span></td>
 <td data-sort="{{.Downloads}}">{{.Downloads}}{{if gt .MaxDownloads 0}} / {{.MaxDownloads}}{{end}}</td>
 <td>{{.ExpiresIn}}</td>
 <td>
-<button type="button" class="btn btn-preview" onclick="preview('{{$.BaseURL}}{{.RelPath}}','{{.ContentType}}','{{.Filename}}')">👁</button>
-<button type="button" class="btn btn-ghost" onclick="copyLink('{{$.BaseURL}}{{.RelPath}}',this)">📋</button>
-<button type="button" class="btn btn-edit" onclick="editFile('{{.ID}}','{{.Filename}}')">Edit</button>
-<form method="post" action="/admin/delete?id={{.ID}}" onsubmit="return confirm('Delete {{.Filename}}?')">
-<button class="btn btn-del" type="submit">Delete</button>
-</form>
+<button type="button" class="btn btn-preview" title="Preview" data-url="{{$.BaseURL}}{{.RelPath}}" data-ctype="{{.ContentType}}" data-name="{{.Filename}}" onclick="preview(this.dataset.url,this.dataset.ctype,this.dataset.name)">👁</button>
+<button type="button" class="btn btn-ghost" title="Copy link" data-url="{{$.BaseURL}}{{.RelPath}}" onclick="copyLink(this.dataset.url,this)">📋</button>
+<button type="button" class="btn btn-edit" data-id="{{.ID}}" data-name="{{.Filename}}" onclick="editFile(this.dataset.id,this.dataset.name)">Edit</button>
+<button class="btn btn-del" type="submit" formmethod="post" formaction="/admin/delete?id={{.ID}}" data-name="{{.Filename}}" onclick="return confirm('Delete '+this.dataset.name+'?')">Delete</button>
 </td>
 </tr>
 {{else}}
@@ -205,13 +204,13 @@ details[open] summary{margin-bottom:6px}
 <form id="edit-form" method="post">
 <div style="margin:14px 0">
 <label style="display:block;font-size:12px;font-weight:600;color:#444;margin-bottom:6px">Expires after (days)</label>
-<input name="max_days" type="number" min="0" placeholder="e.g. 30" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:5px;font-size:14px">
+<input name="max_days" type="number" min="0" max="3650" step="1" placeholder="e.g. 30" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:5px;font-size:14px">
 <div style="font-size:11px;color:#888;margin-top:4px">Leave blank to keep current. Use 0 for never.</div>
 </div>
 <div style="margin:14px 0">
 <label style="display:block;font-size:12px;font-weight:600;color:#444;margin-bottom:6px">Max downloads</label>
-<input name="max_downloads" type="number" placeholder="-1 for unlimited" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:5px;font-size:14px">
-<div style="font-size:11px;color:#888;margin-top:4px">Leave blank to keep current. -1 = unlimited.</div>
+<input name="max_downloads" type="number" min="-1" max="1000000" step="1" placeholder="-1 for unlimited" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:5px;font-size:14px">
+<div style="font-size:11px;color:#888;margin-top:4px">Leave blank to keep current. -1 = unlimited (0 is not allowed: the file would stop downloading immediately).</div>
 </div>
 <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:22px">
 <button type="button" class="btn btn-ghost" onclick="closeEdit()">Cancel</button>
@@ -236,8 +235,10 @@ function filterTable(){const q=document.getElementById('searchbox').value.toLowe
 let sortState={col:-1,dir:1}
 function sortTable(col,type){const tb=document.querySelector('#filetable tbody');const rows=Array.from(tb.querySelectorAll('tr')).filter(r=>!r.querySelector('.empty'));if(sortState.col===col)sortState.dir=-sortState.dir;else{sortState.col=col;sortState.dir=1}rows.sort((a,b)=>{const ac=a.cells[col],bc=b.cells[col];if(!ac||!bc)return 0;let av=ac.dataset.sort||ac.textContent.trim(),bv=bc.dataset.sort||bc.textContent.trim();if(type==='num'){av=parseFloat(av)||0;bv=parseFloat(bv)||0;return(av-bv)*sortState.dir}return av.localeCompare(bv)*sortState.dir});rows.forEach(r=>tb.appendChild(r));document.querySelectorAll('th.sortable').forEach(th=>th.classList.remove('sort-asc','sort-desc'));const ths=document.querySelectorAll('th');if(ths[col])ths[col].classList.add(sortState.dir>0?'sort-asc':'sort-desc')}
 function copyLink(url,btn){navigator.clipboard.writeText(url).then(()=>{const o=btn.textContent;btn.textContent='✓';setTimeout(()=>btn.textContent=o,1500)})}
-function preview(url,ctype,name){const m=document.getElementById('modal'),b=document.getElementById('modal-body'),t=document.getElementById('modal-title');t.textContent=name;b.innerHTML='';if(ctype.startsWith('image/')){b.innerHTML=`<img src="${url}">`}else if(ctype.startsWith('text/')||ctype.includes('json')||ctype.includes('xml')){fetch(url).then(r=>r.text()).then(txt=>{b.innerHTML='<pre></pre>';b.querySelector('pre').textContent=txt.substring(0,100000)})}else if(ctype.includes('pdf')){b.innerHTML=`<iframe src="${url}" width="800" height="600"></iframe>`}else if(ctype.startsWith('video/')){b.innerHTML=`<video src="${url}" controls style="max-width:100%;max-height:75vh"></video>`}else if(ctype.startsWith('audio/')){b.innerHTML=`<audio src="${url}" controls></audio>`}else{b.innerHTML=`<p>No preview available for <code>${ctype}</code></p><p><a href="${url}" class="btn btn-link" target="_blank">Open in new tab</a></p>`}m.classList.add('show')}
-function closeModal(){document.getElementById('modal').classList.remove('show');document.getElementById('modal-body').innerHTML=''}
+function el(tag,attrs){const e=document.createElement(tag);for(const k in(attrs||{}))e.setAttribute(k,attrs[k]);return e}
+function safeURL(u){try{const x=new URL(u,location.href);return(x.protocol==='https:'||x.protocol==='http:')?x.href:null}catch(e){return null}}
+function preview(url,ctype,name){const m=document.getElementById('modal'),b=document.getElementById('modal-body'),t=document.getElementById('modal-title');t.textContent=name;b.replaceChildren();const href=safeURL(url);ctype=String(ctype||'');if(!href)return;if(ctype.startsWith('image/')){b.append(el('img',{src:href,alt:''}))}else if(ctype.startsWith('text/')||ctype.includes('json')||ctype.includes('xml')){const pre=el('pre');pre.textContent='Loading...';b.append(pre);fetch(href,{credentials:'omit'}).then(r=>r.text()).then(txt=>{pre.textContent=txt.substring(0,100000)}).catch(()=>{pre.textContent='Could not load the file.'})}else if(ctype.includes('pdf')){b.append(el('iframe',{src:href,width:'800',height:'600',referrerpolicy:'no-referrer'}))}else if(ctype.startsWith('video/')){b.append(el('video',{src:href,controls:'',style:'max-width:100%;max-height:75vh'}))}else if(ctype.startsWith('audio/')){b.append(el('audio',{src:href,controls:''}))}else{const p=el('p');p.append('No preview available for ');const c=el('code');c.textContent=ctype;p.append(c);const p2=el('p');const a=el('a',{href:href,class:'btn btn-link',target:'_blank',rel:'noopener noreferrer'});a.textContent='Open in new tab';p2.append(a);b.append(p,p2)}m.classList.add('show')}
+function closeModal(){document.getElementById('modal').classList.remove('show');document.getElementById('modal-body').replaceChildren()}
 function editFile(id,filename){const m=document.getElementById('edit-modal');const f=document.getElementById('edit-form');document.getElementById('edit-title').textContent='Edit file';document.getElementById('edit-subtitle').textContent=filename;f.action='/admin/expiry?id='+encodeURIComponent(id);f.reset();m.classList.add('show')}
 function closeEdit(){document.getElementById('edit-modal').classList.remove('show')}
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeModal();closeEdit()}})

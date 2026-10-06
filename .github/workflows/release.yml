@@ -9,40 +9,33 @@ permissions:
   contents: write
 
 jobs:
-  build:
+  release:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        goos: [linux]
-        goarch: [amd64, arm64, arm]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
-          go-version: '1.22'
-      - name: Build
+          go-version: '1.27'
+          check-latest: true
+      - name: Test
+        run: cd admin && go vet ./... && go test -count=1 ./...
+      - name: govulncheck (release gate)
         run: |
-          cd admin
-          GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} \
-            go build -trimpath -ldflags='-s -w' \
-            -o ../transfercli-admin-${{ matrix.goos }}-${{ matrix.goarch }} main.go
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: transfercli-admin-${{ matrix.goos }}-${{ matrix.goarch }}
-          path: transfercli-admin-${{ matrix.goos }}-${{ matrix.goarch }}
-
-  release:
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
-        with:
-          path: dist
-          merge-multiple: true
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+          (cd admin && govulncheck ./...)
+          (cd backend && govulncheck ./...)
+      - name: Build binaries + SHA256SUMS
+        run: scripts/build-release.sh "${GITHUB_REF_NAME}" amd64 arm64 arm
+      - name: Scan the built binaries
+        run: for f in dist/transfersh-linux-amd64 dist/transfercli-admin-linux-amd64; do govulncheck -mode=binary "$f"; done
       - name: Create release
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/*
-          generate_release_notes: true
+          files: |
+            dist/SHA256SUMS
+            dist/transfercli-admin-linux-*
+            dist/transfersh-linux-*
+          body: |
+            See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/${{ github.ref_name }}/CHANGELOG.md).
+
+            Install: `curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/${{ github.ref_name }}/install.sh -o install.sh && sudo bash install.sh`

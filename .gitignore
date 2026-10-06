@@ -20,3 +20,6 @@ Thumbs.db
 *.sqlite
 *.htpasswd
 /var/
+
+# Release build output
+/dist/

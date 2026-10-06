@@ -1,0 +1,10 @@
+# Restarts transfer.sh when the admin panel saves /etc/transfercli.env (replaces the old sudoers rule).
+[Unit]
+Description=Restart transfer.sh when TransferCLI settings change
+
+[Path]
+PathChanged=/etc/transfercli.env
+Unit=transfercli-config.service
+
+[Install]
+WantedBy=multi-user.target
