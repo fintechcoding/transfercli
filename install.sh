@@ -193,7 +193,8 @@ NEW_CREDS=""
 setup_credentials() {
     # Admin panel: bcrypt htpasswd checked by the admin service itself.
     if [ -n "$ADMIN_PASSWORD" ] || [ ! -s "$ADMIN_HTPASSWD" ] || ! grep -q '^[^:]*:\$2[aby]\$' "$ADMIN_HTPASSWD"; then
-        [ -n "$ADMIN_PASSWORD" ] || { ADMIN_PASSWORD="$(gen_password)"; NEW_CREDS+="admin:   user=$ADMIN_USER password=$ADMIN_PASSWORD"$'\n'; }
+        [ -n "$ADMIN_PASSWORD" ] || ADMIN_PASSWORD="$(gen_password)"
+        NEW_CREDS+="admin:   user=$ADMIN_USER password=$ADMIN_PASSWORD"$'\n'
         printf '%s\n' "$ADMIN_PASSWORD" | htpasswd -iBC 12 -c "$ADMIN_HTPASSWD" "$ADMIN_USER" 2>/dev/null
     fi
     chown root:transfercli "$ADMIN_HTPASSWD"; chmod 0640 "$ADMIN_HTPASSWD"
@@ -204,7 +205,8 @@ setup_credentials() {
         return
     fi
     if [ -n "$UPLOAD_PASSWORD" ] || [ ! -s "$UPLOAD_HTPASSWD" ]; then
-        [ -n "$UPLOAD_PASSWORD" ] || { UPLOAD_PASSWORD="$(gen_password)"; NEW_CREDS+="upload:  user=$UPLOAD_USER password=$UPLOAD_PASSWORD"$'\n'; }
+        [ -n "$UPLOAD_PASSWORD" ] || UPLOAD_PASSWORD="$(gen_password)"
+        NEW_CREDS+="upload:  user=$UPLOAD_USER password=$UPLOAD_PASSWORD"$'\n'
         printf '%s\n' "$UPLOAD_PASSWORD" | htpasswd -iBC 10 -c "$UPLOAD_HTPASSWD" "$UPLOAD_USER" 2>/dev/null
     fi
     chown root:transfercli "$UPLOAD_HTPASSWD"; chmod 0640 "$UPLOAD_HTPASSWD"
@@ -404,7 +406,7 @@ print_summary() {
     local admin_url="${PUBLIC_URL:+${PUBLIC_URL}/admin/}"
     admin_url="${admin_url:-http://127.0.0.1:${PORT_ADMIN}/admin/}"
     if [ -n "$NEW_CREDS" ]; then
-        { echo "# TransferCLI credentials generated on $(date -u +%FT%TZ) - keep this file private"; printf '%s' "$NEW_CREDS"; } >> "$CRED_FILE"
+        { echo "# TransferCLI credentials set on $(date -u +%FT%TZ) - keep this file private (the newest entry wins)"; printf '%s' "$NEW_CREDS"; } >> "$CRED_FILE"
         chmod 0600 "$CRED_FILE"
     fi
     printf '\n\033[1;32m  TransferCLI %s installed\033[0m\n\n' "$VERSION"
