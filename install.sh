@@ -111,7 +111,8 @@ validate_inputs() {
         PUBLIC_URL="https://$DOMAIN"
     fi
     if [ -n "$PUBLIC_URL" ]; then
-        [[ "$PUBLIC_URL" =~ ^https?://[A-Za-z0-9.:\[\]-]+$ ]] || err "TC_PUBLIC_URL must be scheme://host[:port] without a path"
+        local url_re='^https?://[][A-Za-z0-9.:-]+$'   # ']' first so the bracket expression accepts IPv6 brackets
+        [[ "$PUBLIC_URL" =~ $url_re ]] || err "TC_PUBLIC_URL must be scheme://host[:port] without a path"
     fi
     case "$TITLE" in *$'\n'*|*'"'*|*'\'*|*'$'*|*'`'*) err "TC_TITLE must not contain quotes, backslashes, \$, \` or newlines" ;; esac
 }
