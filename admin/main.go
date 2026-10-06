@@ -785,35 +785,68 @@ func (c *htpasswdCache) load(path string) (map[string][]byte, error) {
 	return users, nil
 }
 
-// failure limiter: at most authFailBurst failed logins per authFailWindow for the whole process.
-// It only slows guessing down; it never locks the panel for longer than one window.
+// Failed-login limiter, per client address (the proxy's X-Real-IP, trusted only from loopback) with a
+// global ceiling as a backstop. It only slows guessing down and never locks anyone out for longer than one
+// window. Per-client counting matters because the upload API is public: a global counter would let anyone
+// lock the admin out by sending wrong passwords.
 const (
-	authFailBurst  = 20
+	authFailBurst  = 10  // failed logins per client per window
+	authFailGlobal = 300 // failed logins per window for the whole process
 	authFailWindow = time.Minute
 )
 
-var authFails struct {
-	mu    sync.Mutex
+type failWindow struct {
 	start time.Time
 	n     int
 }
 
-func authThrottled() bool {
-	authFails.mu.Lock()
-	defer authFails.mu.Unlock()
-	if time.Since(authFails.start) > authFailWindow {
-		authFails.start, authFails.n = time.Now(), 0
+func (f *failWindow) current() int {
+	if time.Since(f.start) > authFailWindow {
+		f.start, f.n = time.Now(), 0
 	}
-	return authFails.n >= authFailBurst
+	return f.n
 }
 
-func authFailed() {
-	authFails.mu.Lock()
-	defer authFails.mu.Unlock()
-	if time.Since(authFails.start) > authFailWindow {
-		authFails.start, authFails.n = time.Now(), 0
+var authFails = struct {
+	sync.Mutex
+	m     map[string]*failWindow
+	total failWindow
+}{m: map[string]*failWindow{}}
+
+func authThrottled(r *http.Request) bool {
+	authFails.Lock()
+	defer authFails.Unlock()
+	if authFails.total.current() >= authFailGlobal {
+		return true
 	}
-	authFails.n++
+	f := authFails.m[clientAddr(r)]
+	return f != nil && f.current() >= authFailBurst
+}
+
+func authFailed(r *http.Request) {
+	authFails.Lock()
+	defer authFails.Unlock()
+	authFails.total.current()
+	authFails.total.n++
+	key := clientAddr(r)
+	f := authFails.m[key]
+	if f == nil {
+		if len(authFails.m) > 10000 { // drop expired entries
+			for k, v := range authFails.m {
+				if time.Since(v.start) > authFailWindow {
+					delete(authFails.m, k)
+				}
+			}
+		}
+		f = &failWindow{start: time.Now()}
+		authFails.m[key] = f
+	}
+	f.current()
+	f.n++
+}
+
+func bcryptOK(hash []byte, pass string) bool {
+	return bcrypt.CompareHashAndPassword(hash, []byte(pass)) == nil
 }
 
 func clientAddr(r *http.Request) string {
@@ -840,10 +873,10 @@ func checkBasicAuth(r *http.Request) (ok bool, configErr error) {
 	}
 	hash, known := users[u]
 	if !known {
-		_ = bcrypt.CompareHashAndPassword(dummyHash, []byte(p))
+		bcryptOK(dummyHash, p)
 		return false, nil
 	}
-	return bcrypt.CompareHashAndPassword(hash, []byte(p)) == nil, nil
+	return bcryptOK(hash, p), nil
 }
 
 func securityHeaders(w http.ResponseWriter) {
@@ -869,7 +902,7 @@ func admin(methods string, next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		securityHeaders(w)
 		if cfg.Htpasswd != "" {
-			if authThrottled() {
+			if authThrottled(r) {
 				http.Error(w, "too many failed logins, try again in a minute", http.StatusTooManyRequests)
 				return
 			}
@@ -881,7 +914,7 @@ func admin(methods string, next http.HandlerFunc) http.HandlerFunc {
 			}
 			if !ok {
 				if _, _, sent := r.BasicAuth(); sent {
-					authFailed()
+					authFailed(r)
 					log.Printf("failed admin login from %s", clientAddr(r))
 				}
 				w.Header().Set("WWW-Authenticate", `Basic realm="`+strings.ReplaceAll(cfg.Title, `"`, "")+` admin", charset="UTF-8"`)
@@ -935,6 +968,10 @@ func routes() http.Handler {
 	mux.HandleFunc("/admin", admin("GET,HEAD", func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/admin/", http.StatusMovedPermanently)
 	}))
+	// Chunked uploads (files larger than a proxy's request limit) and the upload client downloads.
+	mux.HandleFunc("/api/uploads", uploadAPI(handleCreateUpload))
+	mux.HandleFunc("/api/uploads/", uploadAPI(handleUploadSession))
+	mux.HandleFunc("/client/", handleClient)
 	return mux
 }
 
@@ -944,6 +981,25 @@ func main() {
 			"Only expose it through a reverse proxy that does.")
 	} else if _, err := htcache.load(cfg.Htpasswd); err != nil {
 		log.Fatalf("TC_ADMIN_HTPASSWD: %v", err)
+	}
+	if ccfg.Htpasswd != "" {
+		if _, err := uploadHT.load(ccfg.Htpasswd); err != nil {
+			log.Fatalf("TC_UPLOAD_HTPASSWD: %v", err)
+		}
+		if err := os.MkdirAll(ccfg.Dir, 0o750); err != nil {
+			log.Fatalf("TC_CHUNK_DIR: %v", err)
+		}
+		var a, b syscall.Stat_t
+		if syscall.Stat(ccfg.Dir, &a) == nil && syscall.Stat(cfg.UploadsDir, &b) == nil && a.Dev != b.Dev {
+			log.Printf("NOTE: %s and %s are on different file systems; completing an upload copies the file", ccfg.Dir, cfg.UploadsDir)
+		}
+		go func() {
+			for {
+				sweepSessions()
+				time.Sleep(10 * time.Minute)
+			}
+		}()
+		log.Printf("chunked uploads enabled: %d MiB chunks, max %d GiB per file", ccfg.ChunkSize/mib, ccfg.MaxSize/(1024*mib))
 	}
 	srv := &http.Server{
 		Addr:              cfg.Listen,
