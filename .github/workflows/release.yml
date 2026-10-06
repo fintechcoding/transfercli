@@ -35,6 +35,7 @@ jobs:
             dist/SHA256SUMS
             dist/transfercli-admin-linux-*
             dist/transfersh-linux-*
+            dist/transfercli-web.tar.gz
           body: |
             See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/${{ github.ref_name }}/CHANGELOG.md).
 

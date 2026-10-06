@@ -148,13 +148,17 @@ build_from_source() {
     curl -fsSL "https://github.com/${REPO}/archive/refs/tags/${VERSION}.tar.gz" | tar -xz -C "$TMP/src" --strip-components=1
     (cd "$TMP/src" && CGO_ENABLED=0 GOFLAGS=-mod=readonly go build -C admin -trimpath -ldflags "-s -w" -o "$TMP/dist/transfercli-admin-linux-$ARCH" .)
     (cd "$TMP/src" && CGO_ENABLED=0 GOFLAGS=-mod=readonly go build -C backend -trimpath -ldflags "-s -w" -o "$TMP/dist/transfersh-linux-$ARCH" .)
-    (cd "$TMP/dist" && sha256sum "transfercli-admin-linux-$ARCH" "transfersh-linux-$ARCH" > SHA256SUMS)
+    command -v perl >/dev/null || err "TC_BUILD_FROM_SOURCE=1 needs perl"
+    (cd "$TMP/src" && CGO_ENABLED=0 go run -C backend ./cmd/webdump "$TMP/webroot/web")
+    perl -pi -e 's/\b(curl(?:\.exe)?) (?=[^\n|]*--upload-file)/$1 -u __TC_UPLOAD_USER__:PASSWORD /g' "$TMP/webroot/web/index.html" "$TMP/webroot/web/index.txt"
+    tar -C "$TMP/webroot" -czf "$TMP/dist/transfercli-web.tar.gz" web
+    (cd "$TMP/dist" && sha256sum "transfercli-admin-linux-$ARCH" "transfersh-linux-$ARCH" transfercli-web.tar.gz > SHA256SUMS)
 }
 
 fetch_binaries() {
     ARCH="$(detect_arch)"
-    TMP="$(mktemp -d)"; mkdir -p "$TMP/dist" "$TMP/src"
-    local files=("transfercli-admin-linux-$ARCH" "transfersh-linux-$ARCH")
+    TMP="$(mktemp -d)"; mkdir -p "$TMP/dist" "$TMP/src" "$TMP/webroot"
+    local files=("transfercli-admin-linux-$ARCH" "transfersh-linux-$ARCH" "transfercli-web.tar.gz")
     if [ -n "$LOCAL_DIST" ]; then
         log "Using local release files from $LOCAL_DIST"
         cp "$LOCAL_DIST/SHA256SUMS" "${files[@]/#/$LOCAL_DIST/}" "$TMP/dist/" || err "missing files in $LOCAL_DIST"
@@ -169,15 +173,23 @@ fetch_binaries() {
         done
     fi
     log "Verifying checksums..."
-    (cd "$TMP/dist" && grep -E "  (transfercli-admin|transfersh)-linux-$ARCH\$" SHA256SUMS | sha256sum -c --strict --quiet -) \
+    local want="  ((transfercli-admin|transfersh)-linux-$ARCH|transfercli-web\.tar\.gz)\$"
+    (cd "$TMP/dist" && grep -E "$want" SHA256SUMS | sha256sum -c --strict --quiet -) \
         || err "Checksum verification FAILED - refusing to install"
-    [ "$(grep -cE "  (transfercli-admin|transfersh)-linux-$ARCH\$" "$TMP/dist/SHA256SUMS")" -eq 2 ] || err "SHA256SUMS does not list both binaries for $ARCH"
+    [ "$(grep -cE "$want" "$TMP/dist/SHA256SUMS")" -eq 3 ] || err "SHA256SUMS does not list all release files for $ARCH"
     ok "Checksums verified"
     install -d -m 0755 "$PREFIX"
     install -m 0755 "$TMP/dist/transfersh-linux-$ARCH" "$PREFIX/transfersh.new"
     install -m 0755 "$TMP/dist/transfercli-admin-linux-$ARCH" "$PREFIX/transfercli-admin.new"
     mv -f "$PREFIX/transfersh.new" "$PREFIX/transfersh"
     mv -f "$PREFIX/transfercli-admin.new" "$PREFIX/transfercli-admin"
+    # Web UI with upload examples that include the upload user (used when uploads need a password)
+    rm -rf "$PREFIX/web.new"; mkdir -p "$PREFIX/web.new"
+    tar -xzf "$TMP/dist/transfercli-web.tar.gz" -C "$PREFIX/web.new" --strip-components=1 --no-same-owner
+    sed -i "s/__TC_UPLOAD_USER__/${UPLOAD_USER}/g" "$PREFIX/web.new/index.html" "$PREFIX/web.new/index.txt"
+    find "$PREFIX/web.new" -type d -exec chmod 0755 {} + ; find "$PREFIX/web.new" -type f -exec chmod 0644 {} +
+    rm -rf "$PREFIX/web.old"; [ -d "$PREFIX/web" ] && mv "$PREFIX/web" "$PREFIX/web.old"
+    mv "$PREFIX/web.new" "$PREFIX/web"; rm -rf "$PREFIX/web.old"
     ok "Installed: $("$PREFIX/transfersh" --version 2>&1 | tail -1)"
 }
 
@@ -227,7 +239,12 @@ EOF
     # Root-owned transfer.sh settings. Loaded after $ENV_FILE, so the admin panel cannot override them.
     {
         echo "# transfer.sh settings managed by the TransferCLI installer (re-run install.sh to change)"
-        if [ "$PUBLIC_UPLOADS" = 1 ]; then echo "HTTP_AUTH_HTPASSWD="; else echo "HTTP_AUTH_HTPASSWD=$UPLOAD_HTPASSWD"; fi
+        if [ "$PUBLIC_UPLOADS" = 1 ]; then
+            echo "HTTP_AUTH_HTPASSWD="
+        else
+            echo "HTTP_AUTH_HTPASSWD=$UPLOAD_HTPASSWD"
+            echo "WEB_PATH=$PREFIX/web"   # pages whose upload examples send -u $UPLOAD_USER:PASSWORD
+        fi
         if [ "$MAX_UPLOAD_MB" != 0 ]; then echo "MAX_UPLOAD_SIZE=$((MAX_UPLOAD_MB * 1024))"; fi
         if [ "$RATE_LIMIT" != 0 ]; then echo "RATE_LIMIT=$RATE_LIMIT"; fi
     } > "$TSH_ENV"
@@ -441,9 +458,24 @@ print_summary() {
     echo
 }
 
+# Value of KEY in an existing env file (empty if missing). Used so that re-running the installer for an
+# upgrade keeps the settings of the previous run unless they are given again.
+prev() { [ -f "$2" ] && sed -n "s/^$1=//p" "$2" | tail -1 | tr -d '"' || true; }
+
+load_previous_settings() {
+    local v
+    if [ -z "${TC_RATE_LIMIT:-}" ]; then v="$(prev RATE_LIMIT "$TSH_ENV")"; RATE_LIMIT="${v:-$RATE_LIMIT}"; fi
+    if [ -z "${TC_MAX_UPLOAD_MB:-}" ]; then v="$(prev MAX_UPLOAD_SIZE "$TSH_ENV")"; [[ "$v" =~ ^[0-9]+$ ]] && MAX_UPLOAD_MB=$((v / 1024)); fi
+    if [ -z "${TC_PUBLIC_UPLOADS:-}" ] && [ -f "$TSH_ENV" ] && grep -q '^HTTP_AUTH_HTPASSWD=$' "$TSH_ENV"; then PUBLIC_UPLOADS=1; fi
+    if [ -z "${TC_PUBLIC_URL:-}" ] && [ -z "$DOMAIN" ]; then v="$(prev TC_BASE_URL "$ADMIN_ENV")"; PUBLIC_URL="${v:-$PUBLIC_URL}"; fi
+    if [ -z "${TC_TITLE:-}" ]; then v="$(prev TC_TITLE "$ADMIN_ENV")"; TITLE="${v:-$TITLE}"; fi
+    return 0
+}
+
 main() {
     require_root
     detect_os
+    load_previous_settings
     validate_inputs
     install_pkgs
     ensure_user

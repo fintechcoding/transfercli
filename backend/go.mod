@@ -2,7 +2,10 @@ module github.com/fintechcoding/transfercli/backend
 
 go 1.25.0
 
-require github.com/dutchcoders/transfer.sh v1.6.2-0.20260928045434-f040f28df9fd
+require (
+	github.com/dutchcoders/transfer.sh v1.6.2-0.20260928045434-f040f28df9fd
+	github.com/dutchcoders/transfer.sh-web v0.0.0-20221119114740-ca3a2621d2a6
+)
 
 require (
 	cloud.google.com/go/auth v0.20.0 // indirect
@@ -39,7 +42,6 @@ require (
 	github.com/cloudflare/circl v1.6.3 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.2 // indirect
 	github.com/dutchcoders/go-clamd v0.0.0-20170520113014-b970184f4d9e // indirect
-	github.com/dutchcoders/transfer.sh-web v0.0.0-20221119114740-ca3a2621d2a6 // indirect
 	github.com/elazarl/go-bindata-assetfs v1.0.1 // indirect
 	github.com/fatih/color v1.14.1 // indirect
 	github.com/felixge/httpsnoop v1.1.0 // indirect

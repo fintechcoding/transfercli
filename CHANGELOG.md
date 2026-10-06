@@ -38,7 +38,15 @@
 - nginx overwrites `X-Forwarded-For`/`X-Real-IP` instead of appending, so clients cannot spoof the address
   transfer.sh uses for rate limiting.
 
+### Web UI
+- transfer.sh's start page showed upload examples without credentials, which fail now that uploads need a
+  password. Releases include `transfercli-web.tar.gz` — transfer.sh's own pages (extracted from the pinned
+  `transfer.sh-web`, `backend/cmd/webdump`) with every upload example sending `-u <upload user>:PASSWORD`.
+  The installer serves them with `WEB_PATH` whenever uploads are password-protected.
+
 ### Bug fixes
+- Re-running the installer reset `TC_RATE_LIMIT`, `TC_MAX_UPLOAD_MB`, `TC_PUBLIC_URL`, `TC_TITLE` and
+  `TC_PUBLIC_UPLOADS` to their defaults unless they were given again; it now keeps the previous values.
 - The per-row **Delete** button sat inside the bulk-delete form (nested forms are invalid HTML), so it
   submitted the bulk form: it deleted the *checked* files, or nothing, instead of its own file.
 - Saving settings failed with "permission denied" (the env file was root-owned) and, once writable, would
